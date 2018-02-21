@@ -1,0 +1,94 @@
+# GCC makefile for cwinterp, Contour stencil windowed interpolation demo
+# Pascal Getreuer
+# May 4, 2012
+
+##
+# The following three statements determine the build configuration.
+# For handling different image formats, the program can be linked with
+# the libjpeg, libpng, and libtiff libraries.  For each library, set
+# the flags needed for linking.  To disable use of a library, comment
+# its statement.  You can disable all three (BMP is always supported).
+LDLIBJPEG=-ljpeg
+LDLIBPNG=-lpng
+LDLIBTIFF=-ltiff
+
+##
+# Standard make settings
+SHELL=/bin/sh
+CFLAGS=-O3 -ansi -pedantic -Wall -Wextra
+LDFLAGS=
+LDLIBS=-lm $(LDLIBJPEG) $(LDLIBPNG) $(LDLIBTIFF)
+
+##
+# These statements add compiler flags to define USE_LIBJPEG, etc.,
+# depending on which libraries have been specified above.
+ifneq ($(LDLIBJPEG),)
+	CJPEG=-DUSE_LIBJPEG
+endif
+ifneq ($(LDLIBPNG),)
+	CPNG=-DUSE_LIBPNG
+endif
+ifneq ($(LDLIBTIFF),)
+	CTIFF=-DUSE_LIBTIFF
+endif
+
+ALLCFLAGS=$(CFLAGS) $(CJPEG) $(CPNG) $(CTIFF)
+
+CWINTERP_SOURCES=cwinterpcli.c cwinterp.c nninterp.c drawline.c fitsten.c imageio.c invmat.c basic.c
+IMCOARSEN_SOURCES=imcoarsen.c imageio.c basic.c
+IMDIFF_SOURCES=imdiff.c conv.c imageio.c basic.c
+NNINTERP_SOURCES=nninterpcli.c nninterp.c imageio.c basic.c
+
+ARCHIVENAME=cwinterp_$(shell date -u +%Y%m%d)
+SOURCES=basic.c basic.h conv.c conv.h cwinterp.c cwinterp.h cwinterpcli.c drawline.c \
+drawline.h fitsten.c fitsten.h imageio.c imageio.h imcoarsen.c imdiff.c invmat.c invmat.h \
+nninterp.c nninterp.h nninterpcli.c readme.html bsd-license.txt \
+makefile.gcc makefile.vc doxygen.conf demo demo.bat frog-hr.bmp
+CWINTERP_OBJECTS=$(CWINTERP_SOURCES:.c=.o)
+IMCOARSEN_OBJECTS=$(IMCOARSEN_SOURCES:.c=.o)
+IMDIFF_OBJECTS=$(IMDIFF_SOURCES:.c=.o)
+NNINTERP_OBJECTS=$(NNINTERP_SOURCES:.c=.o)
+.SUFFIXES: .c .o
+.PHONY: all clean rebuild srcdoc dist dist-zip
+
+all: cwinterp imcoarsen imdiff nninterp
+
+cwinterp: $(CWINTERP_OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $(CWINTERP_OBJECTS) $(LDLIBS)
+
+imcoarsen: $(IMCOARSEN_OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $(IMCOARSEN_OBJECTS) $(LDLIBS)
+
+imdiff: $(IMDIFF_OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $(IMDIFF_OBJECTS) $(LDLIBS)
+
+nninterp: $(NNINTERP_OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $(NNINTERP_OBJECTS) $(LDLIBS)
+
+.c.o:
+	$(CC) -c $(ALLCFLAGS) $< -o $@
+
+clean:
+	-$(RM) $(CWINTERP_OBJECTS) $(IMCOARSEN_OBJECTS) $(IMDIFF_OBJECTS) \
+	$(NNINTERP_OBJECTS) cwinterp imcoarsen imdiff nninterp
+
+rebuild: clean all
+
+# Source documentation with Doxygen
+srcdoc: $(SOURCES)
+	doxygen doxygen.conf
+
+dist: $(SOURCES)
+	-rm -rf $(ARCHIVENAME)
+	mkdir $(ARCHIVENAME)
+	ln $(SOURCES) $(ARCHIVENAME)
+	tar vchzf $(ARCHIVENAME).tgz $(ARCHIVENAME)
+	-rm -rf $(ARCHIVENAME)
+
+dist-zip: $(SOURCES)
+	-rm -rf $(ARCHIVENAME)
+	mkdir $(ARCHIVENAME)
+	ln $(SOURCES) $(ARCHIVENAME)
+	-rm -f $(ARCHIVENAME).zip
+	zip -r9 $(ARCHIVENAME).zip $(ARCHIVENAME)/*
+	-rm -rf $(ARCHIVENAME)

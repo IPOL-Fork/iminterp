@@ -1,0 +1,88 @@
+
+Rudin-Osher-Fatemi Total Variation Denoising using Split Bregman
+Pascal Getreuer, pascal.getreuer@yale.edu, Yale University
+
+
+List of Source Files
+====================
+
+This source code creates three command line programs.  The denoising method 
+itself is implemented in the files tvreg.{c,h}, dsolve.h, usolve_gs.h, and 
+zsolve.h.
+
+tvdenoise.c     Command line program that performs TV-regularized denoising
+imnoise.c       Command line program that adds pseudorandom noise to an image
+imdiff.c        Command line program that compares two images
+
+tvreg.{c,h}     Implements TvRestore() the main routine for the split-Bregman
+dsolve.h        Implements DSolve(), which solves the d subproblem
+usolve_gs.h     Implements UGaussSeidelConstantLambda() for the u subproblem
+zsolve.h        Implements solvers for the z subproblem
+tvregopt.h      Utility and options handling functions for TvRestore()
+
+randmt.{c,h}    Mersenne Twister MT19937 pseudorandom number generator
+imageio.{c,h}   Image input and output for BMP, JPEG, PNG, and TIFF formats
+conv.{c,h}      Finite impulse response convolutions (used by imdiff.c)
+basic.{c,h}     Basic definitions and utilities used by all programs
+num.h           File for selecting between float vs. double for computations
+
+
+TV Denoising
+=============
+
+The highlight of this source code is the implementation of total variation 
+(TV) regularized image denoising using the split Bregman algorithm.  This is
+an outline of how the inpainting is performed in the tvdenoise.c code:
+
+
+main(), tvdenoise.c:113      (Program begins here)
+
+    The input image and mask are read with ReadImage().
+
+    Denoise() is called to perform the denoising.
+
+    The denoised image is written with WriteImage().
+
+
+
+Denoise(), tvdenoise.c:237
+
+    If sigma is unspecified (as in the online demo), LambdaTune() is called
+    to select lambda using Chambolle's algorithm.
+
+    TvRestore() is called to perform the denoising.
+
+
+
+TvRestore(), tvreg.c:98
+
+This routine is a generic solver for TV image restoration problems.  In 
+addition to denoising, it can perform inpainting and deconvolution.  Since we
+are performing denoising, the flag "DeconvFlag" is false.  If the noise
+model is Gaussian, then "UseZ" is false as well.
+
+Algorithmic state is saved tvregsolver struct "S" (defined in tvregopt.h:95).
+S includes the current solution u, d, dtilde, z, ztilde of the minimization 
+problem and algorithm parameters in Opt.  S is used to pass information 
+between solver subroutines.
+
+    First, TvRestoreChooseAlgorithm() is called to set algorithm flags.
+
+    Memory is allocated and initialized.
+
+    The main loop for the split-Bregman iteration is on lines 261-281:
+
+        DSolve() is called to solve the d subproblem (implemented in 
+        dsolve.h).
+
+        USolveFun() calls the u-subproblem solver, UGaussSeidelVaryingLambda()
+        (implemented in usolve_gs.h).        
+
+        If the noise model is non-Gaussian, ZSolveFun() is called to solve the
+        z subproblem (implemented in zsolve.h).
+
+        PlotFun() calls TvRestoreSimplePlot() to display the solution progress
+        on the screen (implemented in tvregopt.h:146).
+
+    Clean up.
+
